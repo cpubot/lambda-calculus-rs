@@ -74,27 +74,27 @@ mod evaluator {
         }
     }
 
-    fn single_eval(term: Expr) -> Option<Expr> {
+    fn single_eval<'a>(term: &Expr) -> Option<Expr<'a>> {
         match term {
-            Expr::App(t1, t2) => match *t1 {
+            Expr::App(t1, t2) => match **t1 {
                 Expr::Abs(x, t12) if is_val(t2.as_ref()) => {
                     Some(substitution::subst(x, t2.as_ref(), t12.as_ref()))
                 }
 
                 v1 @ Expr::Abs(_, _) => {
-                    single_eval(*t2).map(|t2| Expr::App(Box::new(v1), Box::new(t2)))
+                    single_eval(t2.as_ref()).map(|t2| Expr::App(Box::new(v1), Box::new(t2)))
                 }
 
-                _ => single_eval(*t1).map(|t1| Expr::App(Box::new(t1), t2)),
+                _ => single_eval(t1.as_ref()).map(|t1| Expr::App(Box::new(t1), *t2)),
             },
             _ => None,
         }
     }
 
-    pub fn multi_step_eval(term: Expr) -> Expr {
-        match single_eval(term.clone()) {
-            Some(val) => multi_step_eval(val),
-            None => term,
+    pub fn multi_step_eval<'a>(term: &Expr<'a>) -> Expr<'a> {
+        match single_eval(term) {
+            Some(val) => multi_step_eval(&val),
+            None => *term,
         }
     }
 }
@@ -121,6 +121,6 @@ pub fn app<'a>(t1: ast::Expr<'a>, t2: ast::Expr<'a>) -> ast::Expr<'a> {
     ast::app(t1, t2)
 }
 
-pub fn eval(term: ast::Expr) -> ast::Expr {
+pub fn eval<'a>(term: &ast::Expr<'a>) -> ast::Expr<'a> {
     evaluator::multi_step_eval(term)
 }
